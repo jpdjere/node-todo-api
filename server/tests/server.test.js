@@ -5,9 +5,12 @@ const {app} = require('./../server.js')
 const {Todo} = require('./../models/todo.js')
 const {ObjectID} = require('mongodb')
 
-const todos = [{_id:new ObjectID(),text:'First test to do'},{_id:new ObjectID(),text:'Second test to do'}];
+const todos = [
+  {_id:new ObjectID(),text:'First test to do'},
+  {_id:new ObjectID(),text:'Second test to do', completed:true, completedAt:333}
+];
 
-beforeEach((done) =>{
+beforeEach((done) => {
   Todo.remove({}).then(() => {
     return Todo.insertMany(todos);
   }).then(()=> done());
@@ -158,5 +161,55 @@ describe('/DELETE todos/:id', ()=>{
       .end(done);
 
   })
+
+})
+
+
+
+
+
+describe('/PATCH todos/:id', ()=>{
+
+  it('should patch a todo', (done) => {
+    var hexId = todos[0]._id.toHexString();
+    var text = "This should be the new text";
+
+    supertest(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        completed:true,
+        text
+      })
+      .expect(200)
+      .expect( (res)=>{
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBe(true);
+        expect(res.body.todo.completedAt).toBeA('number');
+      })
+      .end(done);
+
+  })
+
+  it('should clear completedAt when todo is not completed', (done) => {
+
+    var hexId = todos[1]._id.toHexString();
+    var text = "This should be A NEWER text";
+
+    supertest(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        completed:false,
+        text
+      })
+      .expect(200)
+      .expect( (res)=>{
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBe(false);
+        expect(res.body.todo.completedAt).toNotExist();
+      })
+      .end(done);
+
+
+    })
 
 })
