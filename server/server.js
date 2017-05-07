@@ -1,3 +1,5 @@
+require('./config/config')
+
 const mongoose = require('./db/db');
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -6,7 +8,7 @@ const {User} = require('./models/user');
 const _ = require('lodash');
 
 var app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 const {ObjectID} = require('mongodb');
 
@@ -66,9 +68,9 @@ app.delete('/todos/:id', (req,res) => {
     if(!todo){
       return res.status(404).send();
     }
-    res.send({todoconst});
+    res.send({todo});
   }).catch((e)=>{
-    res.status(400);
+    res.status(400).send();
   })
 
 })
