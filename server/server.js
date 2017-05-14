@@ -122,7 +122,6 @@ app.post('/users', (req, res) => {
     // res.send(user);
     //Instead of simply sending the user, use the custom method (does not require params)
     return user.generateAuthToken();
-
   }).then((token) => {
     //x-auth is a custom header
     //In this case, were using it for JWT tokens
@@ -138,6 +137,29 @@ app.post('/users', (req, res) => {
 app.get('/users/me', authenticate, (req,res) => {
   res.send(req.user);
 })
+
+//The only way to get a token is on the /users post route, and you can't do that twice
+//So we need the following route if you are rejoining the platform.
+//Here we are not using the authenticate middleware because we don-t have a token
+// we are trying to get one
+
+//POST /users/login {email, password}
+app.post('/users/login', (req, res) => {
+
+  var body = _.pick(req.body, ['email', 'password']);
+
+  //If there is no user, the catch statement is triggered
+  User.findByCredentials(body.email, body.password).then((user) => {
+    return user.generateAuthToken().then((token) => {
+      res.header('x-auth', token).send(user);
+    })
+
+  }).catch((e) => {
+    res.status(400).send();
+  })
+
+})
+
 
 app.listen(port, () => {
   console.log('Started server on port '+port);
