@@ -65,7 +65,35 @@ UserSchema.methods.generateAuthToken = function(){
   return user.save().then(() => {
     return token;
   });
+}
 
+//.statics is an object that is kind of like methods, but everything you add to it turn
+// into a model method instead of an instance method
+
+//Here we are creating the findByToken method to the model
+UserSchema.statics.findByToken = function(token){
+  var User = this;
+  //Note that here we user uppercase: isntance methods get called with the
+  //individual document, model methods get called with the model as the 'this' binding
+  var decoded;
+
+  try{
+    decoded = jwt.verify(token, 'abc123');
+  }catch(e){
+    // return new Promise((resolve, reject) => {
+    //   reject();
+    // })
+    //That is equivalent to:
+    return Promise.reject('Unable to verify the token.')
+  }
+
+  //User.findOne will return a promise
+  return User.findOne({
+    _id: decoded._id,
+    //We use quotes to access a subproperty (when we have a dot)
+    'tokens.token':token,
+    'tokens.access': 'auth'
+  })
 }
 
 var User = mongoose.model('User',UserSchema);

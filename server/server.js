@@ -3,14 +3,17 @@ require('./config/config')
 const mongoose = require('./db/db');
 const bodyParser = require('body-parser');
 const express = require('express');
+const _ = require('lodash');
+const {ObjectID} = require('mongodb');
+
 const {Todo} = require('./models/todo');
 const {User} = require('./models/user');
-const _ = require('lodash');
+var {authenticate} = require('./middleware/authenticate');
 
 var app = express();
 const port = process.env.PORT;
 
-const {ObjectID} = require('mongodb');
+
 
 app.use(bodyParser.json());
 
@@ -130,6 +133,13 @@ app.post('/users', (req, res) => {
 
 })
 
+
+
+
+//Call authenticate as middleware
+app.get('/users/me', authenticate, (req,res) => {
+  res.send(req.user);
+})
 
 app.listen(port, () => {
   console.log('Started server on port '+port);
