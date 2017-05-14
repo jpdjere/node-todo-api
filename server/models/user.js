@@ -68,6 +68,29 @@ UserSchema.methods.generateAuthToken = function(){
   });
 }
 
+// Instance method to removeToken, used in the log out route (app.delete('/users/me/token'))
+UserSchema.methods.removeToken = function(token){
+  //What we want to do is rome any oobject inside the token array (which is inside a user object)
+  // that matches the token that is sent to this function
+
+  var user = this;
+  //Update method doesnt doesnt take a query, all we do is pass the
+  return user.update({
+    //$pull is a mongo method that lets you remove objects from an array that meet certain criteria
+    // that means the whole object will be removed, not just the token object (inclued id and access)
+    $pull:{
+      tokens:{
+        token: token
+      }
+    }
+  });
+
+};
+
+
+
+
+
 //.statics is an object that is kind of like methods, but everything you add to it turn
 // into a model method instead of an instance method
 

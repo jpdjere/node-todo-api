@@ -160,6 +160,21 @@ app.post('/users/login', (req, res) => {
 
 })
 
+// Call to log out a user. It will require an x-auth (can't log out someonw who isn't logged in)
+// It will mean removing the corresponding token from the token array.
+// Tthe token won't be have to be sent: we are going to make the route PRIVATE, meaning that you'll
+// have to be authenticated in order to send the code
+app.delete('/users/me/token', authenticate, (req, res) => {
+
+  //Call an instance method to delete the token (custom created)
+  req.user.removeToken(req.token).then(() => {
+    //The then() brings no data, we just need to know when it is sucesfully delted
+    res.status(200).send();
+  }, () => {
+    res.status(400).send();
+  });
+
+})
 
 app.listen(port, () => {
   console.log('Started server on port '+port);
