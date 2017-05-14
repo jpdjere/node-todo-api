@@ -14,6 +14,9 @@ const {ObjectID} = require('mongodb');
 
 app.use(bodyParser.json());
 
+
+
+/*--------------TO DOS ----------------*/
 app.post('/todos', (req, res) => {
 
   var todo = new Todo({
@@ -103,6 +106,29 @@ app.patch('/todos/:id', (req, res)=>{
 
 })
 
+
+
+/*-------------- USERS ----------------*/
+app.post('/users', (req, res) => {
+
+  var body = _.pick(req.body, ['email', 'password']);
+
+  var user = new User(body);
+
+  user.save().then(() =>{
+    // res.send(user);
+    //Instead of simply sending the user, use the custom method (does not require params)
+    return user.generateAuthToken();
+
+  }).then((token) => {
+    //x-auth is a custom header
+    //In this case, were using it for JWT tokens
+    res.header('x-auth', token).send(user);
+  }).catch((e) =>{
+    res.status(400).send(e);
+  })
+
+})
 
 
 app.listen(port, () => {
