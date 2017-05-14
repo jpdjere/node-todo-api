@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const _ = require('lodash');
 
 var UserSchema = new mongoose.Schema({
@@ -95,6 +96,40 @@ UserSchema.statics.findByToken = function(token){
     'tokens.access': 'auth'
   })
 }
+
+//middleware function that runs everytime before the save action is executed.
+// Before we save a document to the database, we want to make sure that the
+// hashed password is in place
+// El primer argumento 'save', es una opcion de accion de Mongoose Middlware,
+// que implica que antes de ese evento, se corre la funcion del segundo argumento
+//Las otras opciones son init, validate y remove http://mongoosejs.com/docs/middleware.html
+
+UserSchema.pre('save', function(next){
+  var user = this;
+
+  // This is important beacuse there are gonna be times when we save the document
+  // and we have never update the password, which means the password will already be hashed
+  // If I save a document with a plain string password and it get hashed, and later on
+  // I update something that is not the password, this middlware is gonna run again
+  // and we are gonna has our hash and the program is gonna break
+  if(user.isModified('password')){
+
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password,salt,(err, hash) => {
+        user.password = hash;
+        //Recordar que este next va aca adentro, si no no se hace el haseho
+        next();
+      })
+    })
+
+
+  }else{
+    next();
+  }
+})
+
+
+
 
 var User = mongoose.model('User',UserSchema);
 

@@ -1,5 +1,6 @@
 const {SHA256} = require('crypto-js');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 var message = 'I am user number 3';
 
 //The result of SHA function is an object, needs to be converted to string
@@ -51,3 +52,23 @@ console.log(token);
 
 var decoded = jwt.verify(token, '123abc');
 console.log(decoded);
+
+
+//Using BCRYPT to securely store passwords
+
+var password = '123abc!';
+
+//The first argument is the number of runs. The bigger the number the less amount
+//of tries a hacker can do in a brute force attack
+bcrypt.genSalt(10, (err, salt) => {
+  bcrypt.hash(password,salt,(err, hash) => {
+    console.log(hash);
+  })
+})
+
+var hashedPassword = '$2a$10$KYoo8lz9jquH68ENuRfoTOnD8kDNLDUnB/Fx5HOsZamcG0t11YxfO';
+
+//Compare if password and hashed password match
+bcrypt.compare(password,hashedPassword,(err,res) => {
+  console.log(res);
+})
