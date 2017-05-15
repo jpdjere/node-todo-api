@@ -18,6 +18,8 @@ describe('POST /todos', ()=>{
 
       supertest(app)
         .post('/todos')
+        //Tengo que setearle el metodo de autentificacion, sino va a fallar
+        .set('x-auth', users[0].tokens[0].token)
         .send({text})
         .expect(200)
         .expect((res)=>{
@@ -42,6 +44,7 @@ describe('POST /todos', ()=>{
   it('should not create a to do with invalid data', (done)=>{
     supertest(app)
       .post('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .send({})
       .expect(400)
       .expect((res)=>{
@@ -71,9 +74,12 @@ describe('/GET todos',()=>{
 
     supertest(app)
       .get('/todos')
+      .set('x-auth', users[0].tokens[0].token)
       .expect(200)
       .expect((res) => {
-        expect(res.body.todos.length).toBe(2);
+        //Antes esperaba 2, la suma de todos, pero ahora va a ser 1, de un solo usuario autorizado
+        // expect(res.body.todos.length).toBe(2);
+        expect(res.body.todos.length).toBe(1);
       })
       .end(done);
 
@@ -85,6 +91,8 @@ describe('/GET todos',()=>{
     it('should return todo doc', (done)=>{
       supertest(app)
         .get(`/todos/${todos[0]._id.toHexString()}`)
+        //El usuario users[0] es el dueño del todo que estamos intentado traer
+        .set('x-auth', users[0].tokens[0].token)
         .expect(200)
         .expect((res)=>{
           // console.log(res.body.text);
@@ -93,10 +101,21 @@ describe('/GET todos',()=>{
         .end(done);
     })
 
+    it('should return not return a todo doc created by other user', (done)=>{
+      supertest(app)
+        //Ahora intento traer el segundo todo (todo[1]), estando autenticado como user[0]
+        .get(`/todos/${todos[1]._id.toHexString()}`)
+        //El usuario users[0]:
+        .set('x-auth', users[0].tokens[0].token)
+        .expect(404)
+        .end(done);
+    })
+
     it('should return 404 if todo not found', (done) =>{
       var hexId = new ObjectID().toHexString();
       supertest(app)
         .get(`/todos/${hexId}`)
+        .set('x-auth', users[0].tokens[0].token)
         .expect(404)
         .end(done);
 
@@ -105,6 +124,7 @@ describe('/GET todos',()=>{
     it('should return 404 for non-object ids', (done)=>{
       supertest(app)
         .get(`/todos/124abs`)
+        .set('x-auth', users[0].tokens[0].token)
         .expect(404)
         .end(done);
     })
@@ -119,9 +139,12 @@ describe('/DELETE todos/:id', ()=>{
 
   it('should remove a todo', (done) => {
     var hexId = todos[1]._id.toHexString();
+    //Como se ve arriba, estamos intentando borrar el segundo to-do, para eso,
+    // vamos a loguearnos como el segundo usuario, que tiene acceso al segundo to-do
 
     supertest(app)
       .delete(`/todos/${hexId}`)
+      .set('x-auth', users[1].tokens[0].token)
       .expect(200)
       .expect( (res)=>{
         expect(res.body.todo._id).toBe(hexId);
@@ -131,6 +154,7 @@ describe('/DELETE todos/:id', ()=>{
           return done(err);
         }
 
+        //No deberíamos encontrar el to-do, porque fue borrado
         Todo.findById(hexId).then((todo) =>{
           expect(todo).toNotExist();
           done();
@@ -140,11 +164,36 @@ describe('/DELETE todos/:id', ()=>{
       })
   })
 
+  it('should remove a todo', (done) => {
+    var hexId = todos[0]._id.toHexString();
+
+
+    supertest(app)
+      .delete(`/todos/${hexId}`)
+      .set('x-auth', users[1].tokens[0].token)
+      .expect(404)
+      .end( (err, res) =>{
+        if(err){
+          return done(err);
+        }
+
+        //El to-do debería seguir existiendo porque el DELETE no funcionó
+        Todo.findById(hexId).then((todo) =>{
+          expect(todo).toExist();
+          done();
+        }).catch( (e)=>{
+          done(e);
+        })
+      })
+  })
+
+  //En los dos casos siguientes, es lo mismo con cual de los dos usuarios se haga la auth
   it('should return a 404 if Todo not found', (done) => {
 
     var hexId = new ObjectID().toHexString();
     supertest(app)
       .delete(`/todos/${hexId}`)
+      .set('x-auth', users[1].tokens[0].token)
       .expect(404)
       .end(done);
   })
@@ -153,6 +202,7 @@ describe('/DELETE todos/:id', ()=>{
 
     supertest(app)
       .delete(`/todos/124abs`)
+      .set('x-auth', users[1].tokens[0].token)
       .expect(404)
       .end(done);
 
@@ -172,6 +222,7 @@ describe('/PATCH todos/:id', ()=>{
 
     supertest(app)
       .patch(`/todos/${hexId}`)
+      .set('x-auth', users[0].tokens[0].token)
       .send({
         completed:true,
         text
@@ -186,6 +237,22 @@ describe('/PATCH todos/:id', ()=>{
 
   })
 
+  it('should fail to patch a todo with an unauthorized user', (done) => {
+    var hexId = todos[0]._id.toHexString();
+    var text = "This should be the new text";
+
+    supertest(app)
+      .patch(`/todos/${hexId}`)
+      .set('x-auth', users[1].tokens[0].token)
+      .send({
+        completed:true,
+        text
+      })
+      .expect(404)
+      .end(done);
+
+  })
+
   it('should clear completedAt when todo is not completed', (done) => {
 
     var hexId = todos[1]._id.toHexString();
@@ -193,6 +260,8 @@ describe('/PATCH todos/:id', ()=>{
 
     supertest(app)
       .patch(`/todos/${hexId}`)
+      //Estoy intentando actualizar el segundo to-do, que corresponde al segundo user
+      .set('x-auth', users[1].tokens[0].token)
       .send({
         completed:false,
         text
@@ -325,7 +394,7 @@ describe('POST /users/login', () => {
 
         //Check if the user returned has an auth access and the token
         User.findById(users[1]._id).then((user) => {
-          expect(user.tokens[0]).toInclude({
+          expect(user.tokens[1]).toInclude({
             access:'auth',
             token: res.headers['x-auth']
           });
@@ -356,7 +425,7 @@ describe('POST /users/login', () => {
 
         //Check if the user returned has an auth access and the token
         User.findById(users[1]._id).then((user) => {
-          expect(user.tokens.length).toBe(0);
+          expect(user.tokens.length).toBe(1);
           done();
         }).catch((e) => done(e))
       })

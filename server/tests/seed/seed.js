@@ -20,14 +20,20 @@ const users = [{
 },{
   _id:userTwoId,
   email: 'jen@example.com',
-  password: 'userTwopass'
+  password: 'userTwopass',
+  tokens:[{
+    access:'auth',
+    token: jwt.sign({_id:userTwoId,access:'auth'},'abc123').toString()
+  }]
 }]
 
 //Create testing ToDos
 const todos = [
-  {_id:new ObjectID(),text:'First test to do'},
-  {_id:new ObjectID(),text:'Second test to do', completed:true, completedAt:333}
+  {_id:new ObjectID(),text:'First test to do',_creator:userOneId},
+  {_id:new ObjectID(),text:'Second test to do', completed:true, completedAt:333,_creator:userTwoId}
 ];
+
+
 
 const populateTodos = (done) => {
   Todo.remove({}).then(() => {

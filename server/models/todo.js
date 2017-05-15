@@ -13,6 +13,12 @@ var Todo = mongoose.model('Todo',{
   },
   completedAt:{
     type:Number
+  },
+  //Uses underscore to show it is an ObjectId
+  _creator:{
+    //Defino que el type es ObjectId que es especifico de Mongoose
+    type:mongoose.Schema.Types.ObjectId,
+    required:true,
   }
 });
 
